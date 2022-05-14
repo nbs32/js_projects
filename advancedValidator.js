@@ -1,11 +1,7 @@
 //const { frontEndFlag } = require("./server/env");
 
-
-
 let validator;
 (() => {
-   const isNode = typeof window === 'undefined';
-   if (isNode) require('./seeds');
    const APPROVED = Symbol();
    class SimpleValidator {
       constructor(func, msg, oprtionalValidator) {
@@ -110,6 +106,7 @@ let validator;
          let errObj = {};
          for (let key of keys) {
             const validItem = this.schema[key];
+            if (!validItem) continue;
             const result = validItem.weakValidation(targetObj[key], rootAncestor);
             if (result === APPROVED) continue;
             hasError = true;
@@ -460,5 +457,4 @@ let validator;
       if (result !== APPROVED) return { hasError: true, errData: result };
       return {};
    }
-   if (isNode) module.exports = validator;
 })();
