@@ -21,6 +21,9 @@ public repository for my projects
 
 ### as you can see from the example above each object has function which return the instance that was created from the first call and add a layer of validation to that ### object,each one of those function has optional last argument called msg,if that argument is specifed as in the example above at [participant.clientId],any error ### validation error accured during validation will return that message error,in complex validation that has more then one stage like string.date its better to leave this ### argument empty.
 
-### all keys by default are required but you can change then to optinal like in the example at key [height] 
+### all keys by default are required but you can change then to optinal like in the example at key [height].
+
+
+
 
 
