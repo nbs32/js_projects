@@ -1,6 +1,6 @@
 //const { frontEndFlag } = require("./server/env");
 
-const { __esModule } = require('number-to-base64');
+
 
 let validator;
 (() => {
