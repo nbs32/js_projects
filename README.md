@@ -17,3 +17,11 @@ public repository for my projects
 ## *example:*
 
 ![CODE!](schema_img.JPG)
+
+# **_classes:_**
+
+## string:
+
+### functions:
+
+### - hhhh
