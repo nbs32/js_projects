@@ -35,6 +35,18 @@ public repository for my projects
 ### weakValidation validate only the adjucent keys that exist in both the schema and the target object, and evrey nested object bellow will be weak validated too,
 ### in the example the "value" object has 3 keys that exist in schema (age,colors,file) only those kets will be validate the rest of the schema would be ignore
 ### if the the inspected object has keys that dont exist in the schema they will be ignore too
+### strongValidation check first that every key in inspected object exists in the schema,and make sure there no keys in the inspected object that dont exist in the schema this true for every nested object too.
+
+# AbstractValidator
+
+### parent class of every validator class
+
+## *functions:*
+
+## enum
+
+### params :values=>array containing the allowed values for validation ,equality=>optinal function that compare 2 targets the inspected value and value from the values array ,if not specified === operator is used instead
+
 
 
 
