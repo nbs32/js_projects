@@ -14,4 +14,4 @@ public repository for my projects
 ### the libary has a global vartiable called "validator" make sure there are no other refrences with that name. the validator object contains all  the functionalities 
 ### for the validation.
 
-## **example:**
+## *example:*
