@@ -24,6 +24,18 @@ public repository for my projects
 ### all keys by default are required but you can change then to optinal like in the example at key [height].
 
 
+![CODE!](schema_img2.JPG)
+
+# Validation Types:
+
+### there are 2 validation types weakValidation and strongValidation! 
+### from the example above to issue any of those validations you use thew validator object the first argument is the schema and the second is the inspected object
+
+## *Diffrencies:*
+### weakValidation validate only the adjucent keys that exist in both the schema and the target object, and evrey nested object bellow will be weak validated too,
+### in the example the "value" object has 3 keys that exist in schema (age,colors,file) only those kets will be validate the rest of the schema would be ignore
+### if the the inspected object has keys that dont exist in the schema they will be ignore too
+
 
 
 
