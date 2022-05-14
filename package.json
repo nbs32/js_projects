@@ -1,0 +1,24 @@
+{
+  "name": "advanced_validator",
+  "version": "1.0.0",
+  "description": "build schemas to validate objects",
+  "main": "advancedValidator.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "schema",
+    "schema validation",
+    "object validation",
+    "validator"
+  ],
+  "author": "",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nbs32/js_projects.git"
+  },
+  "dependencies": {
+    "advanced_validator": "^1.0.0"
+  }
+}
