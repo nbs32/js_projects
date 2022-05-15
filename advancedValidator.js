@@ -1,8 +1,14 @@
-//const { frontEndFlag } = require("./server/env");
+
 
 let validator;
 (() => {
    const APPROVED = Symbol();
+   const EMAIL_RECIPIENT_MAX_SIZE = 64;
+   const EMAIL_DOMAIN_MAX_SIZE = 255;
+   const EMAIL_RECIPIENT_UNIQUE_CHARACTERS = "!#$%&'*+-/=?^_`{|}~";
+   const EMAIL_DPART_MAX_SIZE = 63;
+
+
    class SimpleValidator {
       constructor(func, msg, oprtionalValidator) {
          this.func = func;
@@ -11,6 +17,9 @@ let validator;
       }
       setNewMessage(newMsg) {
          this.newMsg = newMsg;
+      }
+      reset() {
+         this.newMsg = null;
       }
    }
    class ArrayErrorValidation extends Array { }
@@ -32,8 +41,11 @@ let validator;
          if (!first.optional && !first.func(targetVal, rootAncestor, first)) return first.newMsg || first.msg;
          for (let i = 1; i < validators.length; ++i) {
             const validObj = validators[i];
-            if (validObj.is(SimpleValidator) && !validObj.func(targetVal, rootAncestor, validObj))
-               return validObj.newMsg || validObj.msg;
+            if (validObj.is(SimpleValidator) && !validObj.func(targetVal, rootAncestor, validObj)) {
+               const { msg, newMsg } = validObj;
+               validObj.reset();
+               return newMsg || msg;
+            }
             else if (validObj instanceof AbstractValidator) {
                const result = validObj.weakValidation(targetVal, rootAncestor, validObj);
                if (result !== APPROVED) return result;
@@ -83,7 +95,20 @@ let validator;
          this.validators[0] = optionalValidator;
          return this;
       }
+      sameAs(keyPath, equality = (v1, v2) => v1 === v2, msg) {
+         return this.custom((target, rootAncestor, sv) => {
+            let val = rootAncestor;
+            try {
+               let k = keyPath.last();
+               for (let key of keyPath) val = val[key];
+               return equality(target, val) || (!msg && sv.setNewMessage(`target dosent equal to "${k}" value:"${val}"`));
+            } catch (e) {
+               return !msg || sv.setNewMessage(`key path (${keyPath}) failed recived error: "${e.message}"`);
+            }
 
+         }, msg);
+
+      }
 
 
    }
@@ -241,11 +266,56 @@ let validator;
          }, msg || "invalid date");
 
       }
-      email(msg = "invalid email") {
-         return this.custom((email) => {
-            const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-            return re.test(email);
-         }, msg);
+      /*const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+            return re.test(email);*/
+      email(msg) {
+         return this.custom((email, ro, sv) => {
+            if (email[0].evalChars(".@")) return !msg && sv.setNewMessage(`email address can not starts with @ or .`);
+            let atSignIndex;
+            let dotFound;
+            for (let i = 0; i < email.length; ++i) {
+               const c = email[i];
+               if (c === '@') {
+                  atSignIndex = i;
+                  break;
+               }
+               if (!c.isDigit() && !c.isLetter() && !c.evalChars(EMAIL_RECIPIENT_UNIQUE_CHARACTERS))
+                  return !msg && sv.setNewMessage(`email address host can only contain digits, english letters and the characters ${EMAIL_RECIPIENT_UNIQUE_CHARACTERS}`);
+               if (dotFound && c === '.') return !msg && sv.setNewMessage(`trailing dots are not allowed`);
+            }
+            if (atSignIndex >= EMAIL_RECIPIENT_MAX_SIZE)
+               return !msg &&
+                  sv.setNewMessage(`email address host max size is 64 current size ${dotIndex}`);
+
+            if (email[atSignIndex + 1].evalChars('-.') || email.last().evalChars('-.'))
+               return !msg && sv.setNewMessage(`email domain can not start or end with (-.)`);
+
+            const domainSize = email.length - atSignIndex - 1;
+            console.log(domainSize);
+            if (domainSize > EMAIL_DOMAIN_MAX_SIZE)
+               return !msg && sv.setNewMessage(`email domain maximum size is ${EMAIL_DOMAIN_MAX_SIZE} current size ${domainSize}`);
+
+            let countUntilDot = 0;
+            let digitCount = 0;
+            let dotCount = 0;
+            for (let i = atSignIndex + 1; i < email.length; ++i) {
+               const c = email[i];
+               let isDigit = c.isDigit();
+               let isDot = c === '.';
+               dotCount = isDot ? dotCount + 1 : dotCount;
+               digitCount = isDigit ? digitCount + 1 : digitCount;
+               if (isDot) {
+                  if (countUntilDot > EMAIL_DPART_MAX_SIZE) return !msg && sv.setNewMessage(`email domain max text size  between .  ${EMAIL_DPART_MAX_SIZE} invalid part size ${countUntilDot}`);
+                  countUntilDot = 0;
+                  continue;
+               }
+               if (c === '-' || isDigit || c.isLetter()) ++countUntilDot;
+               else return !msg && sv.setNewMessage(`email domain can only contain didits,letters,and - character`);
+
+            }
+            if (digitCount === (domainSize - dotCount)) return !msg && sv.setNewMessage(`its not allowed for the entire email domain to contain digits`);
+            return true;
+         }, msg || 'invalid email');
 
       }
       length(min, max, msg) {
@@ -270,12 +340,10 @@ let validator;
       regex(regex, msg = "target not match regex") {
          return this.custom(target => regex.test(target), msg);
       }
-      password(min, max, specialCharacters, msg) {
-         if (min > max) throw new Error("password validator min length is larger then max length");
+      password(specialCharacters, msg) {
+
 
          if (includeUniqueCahracters) return this.custom((target, rootAncestor, simpleValidator) => {
-            if (target.length < minSize) return !msg && simpleValidator.setNewMessage("password is too short");
-            if (target.length > maxSize) return !msg && simpleValidator.setNewMessage("password is too long");
             let foundDigit;
             let foundLowerCase;
             let foundUpperCase;
@@ -293,8 +361,6 @@ let validator;
             return true;
          }, msg);
          return this.custom((target) => {
-            if (target.length < minSize) return !msg && simpleValidator.setNewMessage("password is too short");
-            if (target.length > maxSize) return !msg && simpleValidator.setNewMessage("password is too long");
             let foundDigit;
             let foundLowerCase;
             let foundUpperCase;
@@ -310,6 +376,46 @@ let validator;
             return true;
          }, msg || "your password is insufficient")
 
+      }
+      charSet(charSets, msg) {
+         if (!charSets.length.isEven()) throw new Error(`charsets doesn't have even number of characters`);
+         return this.custom((target, ro, sv) => {
+            for (let c of target) {
+               let isValid;
+               B: for (let i = 0; i < charSets.length; i += 2)if (c >= charSets[i] && c <= charSets[i + 1]) {
+                  isValid = true;
+                  break B;
+               }
+               if (!isValid) return false;
+            }
+            return true;
+         }, msg || `one or more characters not matching allowed charcter sets (${charSets})`)
+      }
+      url(options, msg) {
+         options = options || {};
+         const { hosts, protocols, domains } = options;
+         return this.custom((target, ro, sv) => {
+            try {
+               const url = new URL(target);
+               const protcol = url.protocol.cutLast();
+               const { hostname } = url;
+
+               if (protocols && !protocols.includes(protcol)) return !msg && sv.setNewMessage(`protcol ${protcol} not matching any of the allowed protocols (${protocols})`);
+               if (!hosts && !domains) return true;
+               let host = [];
+               for (let c of hostname) {
+                  if (c === '.') break;
+                  host.push(c);
+               }
+               host = host.join('');
+               let domain = hostname.substring(host.length);
+               if (hosts && !hosts.includes(host)) return !msg && sv.setNewMessage(`host ${host} not include in list of allowed hosts (${hosts})`);
+               if (domains && !domains.includes(domain)) return !msg && sv.setNewMessage(`domain ${domain} not include in the list of allowed domains (${domains})`);
+               return true;
+            } catch (e) {
+               return !msg && sv.setNewMessage(`invalid url`);
+            }
+         }, msg || `invalid url`);
       }
    }
    class NumberValidator extends AbstractValidator {
@@ -360,6 +466,11 @@ let validator;
       }
       negetive(msg = "require a negetive number") {
          return this.custom(target => target < 0, msg);
+      }
+      divisible(numbers, or, msg) {
+         if (numbers.includes(0)) throw new Error(`0 is not a valid option for "divisble" function`)
+         if (or) return this.custom(target => numbers.find(num => (target % num) === 0), msg || `number is not divisble by any of the allowed denominators (${numbers})`);
+         else return this.custom(target => numbers.every(num => (target % num) === 0), msg || `number is not divisble by all of the allowed denominators (${numbers})`);
       }
       count(max, msg = "integer number of digits is too large maximum allowed " + max) {
          return this.custom(target => {
